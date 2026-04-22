@@ -135,8 +135,8 @@ function IGScreen({ caption, photo }: { caption: string; photo?: string }) {
         </div>
 
         <div className="px-4 pb-4">
-          <p className="font-semibold text-sm">847 likes</p>
-          <p className="text-sm mt-1 leading-relaxed">
+          <p className="font-semibold text-sm text-gray-900">847 likes</p>
+          <p className="text-sm mt-1 leading-relaxed text-gray-900">
             <span className="font-semibold">twelveriversrealty </span>
             {body.slice(0, 180)}{body.length > 180 ? "…" : ""}
           </p>
