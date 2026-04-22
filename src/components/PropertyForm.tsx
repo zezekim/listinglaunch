@@ -9,12 +9,12 @@ interface Props {
 
 export function PropertyForm({ onSubmit, loading }: Props) {
   const [form, setForm] = useState<PropertyInput>({
-    address: "",
-    price: "",
-    bedrooms: "",
-    bathrooms: "",
-    sqft: "",
-    highlights: "",
+    address: "3412 Palomino Lane, Austin, TX 78704",
+    price: "$1,175,000",
+    bedrooms: "4",
+    bathrooms: "3",
+    sqft: "2,650",
+    highlights: "Heated pool and spa, hill country views from the back deck, open-concept kitchen with quartz countertops and Thermador range, primary suite with vaulted ceilings and walk-in closet, 2-car garage, mature live oaks, walking distance to Barton Springs and South Congress Ave",
     propertyType: "residential",
     photos: [],
   });
