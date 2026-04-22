@@ -191,10 +191,13 @@ export function SocialCaptions({ data, photos }: Props) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {platforms.map(({ key, label, color, card }) => (
         <div key={key} className="space-y-2">
-          {card}
+          {/* Scaled-down platform card preview */}
+          <div style={{ zoom: 0.78 }}>
+            {card}
+          </div>
           <button
             onClick={() => postTo(key, data[key])}
             className={`w-full py-2.5 text-sm font-semibold text-white rounded-lg transition ${color}`}
