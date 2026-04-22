@@ -1,41 +1,107 @@
 "use client";
-import { useRef } from "react";
-import { GeneratedPackage } from "@/lib/types";
-import { PropertyInput } from "@/lib/types";
+import { GeneratedPackage, PropertyInput } from "@/lib/types";
 
 interface Props {
-  data: Pick<
-    GeneratedPackage,
-    "pdfHeadline" | "pdfDescription" | "pdfSpecs"
-  >;
+  data: Pick<GeneratedPackage, "pdfHeadline" | "pdfDescription" | "pdfSpecs">;
   property: PropertyInput;
 }
 
 export function PDFFlyer({ data, property }: Props) {
-  const flyerRef = useRef<HTMLDivElement>(null);
-
   async function downloadPDF() {
     const { jsPDF } = await import("jspdf");
-    const { default: html2canvas } = await import("html2canvas");
 
-    if (!flyerRef.current) return;
-    const canvas = await html2canvas(flyerRef.current, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#1a1a1a",
-    });
+    const W = 612;
+    const H = 792;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
 
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: [612, 792],
-    });
+    // Background
+    pdf.setFillColor(15, 12, 10);
+    pdf.rect(0, 0, W, H, "F");
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`listing-${property.address.replace(/[^a-z0-9]/gi, "-")}.pdf`);
+    let y = 0;
+
+    // Photo strip
+    if (property.photos.length > 0) {
+      const photoH = 210;
+      const photoW = W / property.photos.length;
+      property.photos.forEach((photo, i) => {
+        const base64 = photo.split(",")[1];
+        const ext = photo.startsWith("data:image/png") ? "PNG" : "JPEG";
+        pdf.addImage(base64, ext, i * photoW, 0, photoW, photoH);
+      });
+      y = photoH;
+    } else {
+      pdf.setFillColor(35, 28, 22);
+      pdf.rect(0, 0, W, 180, "F");
+      y = 180;
+    }
+
+    y += 28;
+
+    // Top amber rule
+    pdf.setDrawColor(160, 100, 45);
+    pdf.setLineWidth(1.5);
+    pdf.line(50, y, W - 50, y);
+    y += 18;
+
+    // Brand
+    pdf.setTextColor(160, 100, 45);
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("TWELVE RIVERS REALTY  ·  AUSTIN, TEXAS", W / 2, y, { align: "center" });
+    y += 22;
+
+    // Headline
+    pdf.setTextColor(255, 252, 248);
+    pdf.setFontSize(21);
+    pdf.setFont("helvetica", "bold");
+    const headLines = pdf.splitTextToSize(data.pdfHeadline, 500);
+    pdf.text(headLines, W / 2, y, { align: "center" });
+    y += headLines.length * 26 + 8;
+
+    // Specs
+    pdf.setTextColor(175, 160, 140);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(data.pdfSpecs, W / 2, y, { align: "center" });
+    y += 24;
+
+    // Divider
+    pdf.setDrawColor(80, 65, 45);
+    pdf.setLineWidth(0.5);
+    pdf.line(80, y, W - 80, y);
+    y += 22;
+
+    // Description
+    pdf.setTextColor(210, 200, 188);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "normal");
+    const descLines = pdf.splitTextToSize(data.pdfDescription, 490);
+    pdf.text(descLines, W / 2, y, { align: "center" });
+    y += descLines.length * 16 + 24;
+
+    // Bottom rule
+    pdf.setDrawColor(55, 48, 40);
+    pdf.setLineWidth(0.5);
+    pdf.line(40, H - 85, W - 40, H - 85);
+
+    // Contact left
+    pdf.setTextColor(255, 252, 248);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Paul Smith", 50, H - 62);
+    pdf.setTextColor(155, 140, 122);
+    pdf.setFontSize(9);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Partner · REALTOR® · GRI®", 50, H - 47);
+
+    // Contact right
+    pdf.setTextColor(155, 140, 122);
+    pdf.setFontSize(9);
+    pdf.text("512.228.8074", W - 50, H - 62, { align: "right" });
+    pdf.text("TwelveRiversRealty.com", W - 50, H - 47, { align: "right" });
+
+    pdf.save(`listing-${property.address.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.pdf`);
   }
 
   return (
@@ -43,70 +109,53 @@ export function PDFFlyer({ data, property }: Props) {
       <div className="flex justify-end">
         <button
           onClick={downloadPDF}
-          className="text-xs px-4 py-2 bg-amber-700 hover:bg-amber-600 text-white rounded border border-amber-600 transition font-semibold"
+          className="px-5 py-2.5 bg-amber-700 hover:bg-amber-600 text-white text-sm font-bold rounded-lg transition"
         >
           Download PDF
         </button>
       </div>
 
-      {/* Flyer Preview */}
+      {/* On-screen flyer preview */}
       <div
-        ref={flyerRef}
-        style={{ fontFamily: "Georgia, serif" }}
-        className="bg-stone-950 border border-stone-700 rounded-xl overflow-hidden"
+        style={{ fontFamily: "Georgia, serif", background: "#0f0c0a" }}
+        className="border border-stone-700 rounded-xl overflow-hidden"
       >
-        {/* Photo strip */}
         {property.photos.length > 0 ? (
-          <div className="grid grid-cols-3 h-48">
+          <div
+            className="grid h-48"
+            style={{ gridTemplateColumns: `repeat(${property.photos.length}, 1fr)` }}
+          >
             {property.photos.map((p, i) => (
-              <img
-                key={i}
-                src={p}
-                className="w-full h-full object-cover"
-              />
+              <img key={i} src={p} className="w-full h-full object-cover" />
             ))}
           </div>
         ) : (
           <div className="h-48 bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center">
-            <span className="text-stone-600 text-sm">
-              Add photos for flyer
-            </span>
+            <span className="text-stone-600 text-sm">Add photos to include in flyer</span>
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-8 space-y-5">
-          {/* Header */}
-          <div className="text-center space-y-1">
-            <p className="text-amber-600 text-xs tracking-[4px] uppercase font-semibold">
-              Twelve Rivers Realty
+        <div className="p-7 space-y-4">
+          <div className="border-t border-amber-700/50 pt-4 text-center space-y-1">
+            <p className="text-amber-600 text-[10px] tracking-[5px] uppercase font-semibold">
+              Twelve Rivers Realty · Austin, Texas
             </p>
-            <h1 className="text-white text-2xl font-bold leading-tight">
-              {data.pdfHeadline}
-            </h1>
-            <p className="text-stone-400 text-sm tracking-wider">
-              {data.pdfSpecs}
-            </p>
+            <h1 className="text-white text-xl font-bold leading-snug">{data.pdfHeadline}</h1>
+            <p className="text-stone-400 text-sm tracking-wide">{data.pdfSpecs}</p>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-amber-700/40" />
+          <div className="border-t border-stone-700/60" />
 
-          {/* Description */}
           <p className="text-stone-300 text-sm leading-relaxed text-center max-w-lg mx-auto">
             {data.pdfDescription}
           </p>
 
-          {/* Divider */}
-          <div className="border-t border-stone-700" />
-
-          {/* Contact */}
-          <div className="flex items-center justify-between text-xs text-stone-400">
+          <div className="border-t border-stone-800 pt-4 flex items-center justify-between text-xs">
             <div>
               <p className="text-white font-semibold">Paul Smith</p>
-              <p>Partner · REALTOR® · GRI®</p>
+              <p className="text-stone-500">Partner · REALTOR® · GRI®</p>
             </div>
-            <div className="text-right">
+            <div className="text-right text-stone-500">
               <p>512.228.8074</p>
               <p>TwelveRiversRealty.com</p>
             </div>

@@ -51,6 +51,7 @@ export function OutputPanel({ data, property }: Props) {
               linkedin: data.linkedin,
               facebook: data.facebook,
             }}
+            photos={property.photos}
           />
         )}
         {active === "pdf" && (

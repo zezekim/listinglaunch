@@ -5,8 +5,7 @@ import {
   interpolate,
   useCurrentFrame,
   useVideoConfig,
-  Img,
-  staticFile,
+  Audio,
 } from "remotion";
 
 interface PropertyVideoProps {
@@ -16,24 +15,54 @@ interface PropertyVideoProps {
   price: string;
 }
 
-function TextSlide({
-  text,
-  startFrame,
-  durationInFrames,
+function PhotoBg({
+  photo,
+  panDir,
 }: {
-  text: string;
-  startFrame: number;
-  durationInFrames: number;
+  photo: string;
+  panDir: "left" | "right";
 }) {
   const frame = useCurrentFrame();
-  const localFrame = frame - startFrame;
+  const { durationInFrames } = useVideoConfig();
+
+  const scale = interpolate(frame, [0, durationInFrames], [1.0, 1.18], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const panX = interpolate(
+    frame,
+    [0, durationInFrames],
+    panDir === "left" ? [0, -60] : [0, 60],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+
+  return (
+    <AbsoluteFill>
+      <img
+        src={photo}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          transform: `scale(${scale}) translateX(${panX}px)`,
+          transformOrigin: "center center",
+        }}
+      />
+    </AbsoluteFill>
+  );
+}
+
+function TextSlide({ text }: { text: string }) {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+
   const opacity = interpolate(
-    localFrame,
-    [0, 10, durationInFrames - 10, durationInFrames],
+    frame,
+    [0, 18, durationInFrames - 18, durationInFrames],
     [0, 1, 1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
-  const translateY = interpolate(localFrame, [0, 15], [24, 0], {
+  const y = interpolate(frame, [0, 22], [40, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -42,23 +71,23 @@ function TextSlide({
     <AbsoluteFill
       style={{
         opacity,
-        transform: `translateY(${translateY}px)`,
+        transform: `translateY(${y}px)`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "60px",
+        padding: "80px 70px",
       }}
     >
       <p
         style={{
           fontFamily: "Georgia, serif",
-          fontSize: "52px",
+          fontSize: "72px",
           fontWeight: "bold",
           color: "white",
           textAlign: "center",
-          textShadow: "0 2px 20px rgba(0,0,0,0.8)",
-          lineHeight: 1.3,
-          maxWidth: "900px",
+          textShadow: "0 4px 30px rgba(0,0,0,0.9), 0 0 80px rgba(0,0,0,0.6)",
+          lineHeight: 1.25,
+          letterSpacing: "-1px",
         }}
       >
         {text}
@@ -73,79 +102,92 @@ export function PropertyVideo({
   address,
   price,
 }: PropertyVideoProps) {
-  const { fps, durationInFrames } = useVideoConfig();
-  const slideDuration = Math.floor(durationInFrames / slides.length);
-  const photo = photos[0] || null;
+  const { durationInFrames } = useVideoConfig();
+  const slideCount = slides.length || 1;
+  const slideDuration = Math.floor(durationInFrames / slideCount);
+
+  // Cycle photos as backgrounds — each photo gets equal screen time
+  const photoCount = photos.length;
+  const photoDuration = photoCount > 0 ? Math.floor(durationInFrames / photoCount) : durationInFrames;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#1a1a1a" }}>
-      {/* Background photo or gradient */}
-      {photo ? (
-        <AbsoluteFill>
-          <img
-            src={photo}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              opacity: 0.55,
-            }}
-          />
-        </AbsoluteFill>
+    <AbsoluteFill style={{ backgroundColor: "#111" }}>
+      {/* Cycling photo backgrounds with Ken Burns */}
+      {photoCount > 0 ? (
+        photos.map((photo, i) => (
+          <Sequence key={i} from={i * photoDuration} durationInFrames={photoDuration}>
+            <PhotoBg photo={photo} panDir={i % 2 === 0 ? "left" : "right"} />
+          </Sequence>
+        ))
       ) : (
         <AbsoluteFill
           style={{
             background:
-              "linear-gradient(135deg, #1a3a4a 0%, #0d2233 50%, #1a2a1a 100%)",
+              "linear-gradient(160deg, #1a3a4a 0%, #0d1f2d 40%, #1a2518 100%)",
           }}
         />
       )}
 
-      {/* Dark overlay for readability */}
+      {/* Gradient overlay — stronger at bottom for branding */}
       <AbsoluteFill
-        style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.82) 100%)",
+        }}
       />
+
+      {/* Text slides */}
+      {slides.map((text, i) => (
+        <Sequence key={i} from={i * slideDuration} durationInFrames={slideDuration}>
+          <TextSlide text={text} />
+        </Sequence>
+      ))}
 
       {/* Branding bar */}
       <AbsoluteFill
         style={{
-          bottom: 0,
           top: "auto",
-          height: "80px",
-          background: "rgba(10,30,20,0.85)",
+          bottom: 0,
+          height: "160px",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          borderTop: "2px solid #8B7355",
+          gap: "12px",
         }}
       >
+        <div
+          style={{
+            width: "60px",
+            height: "2px",
+            backgroundColor: "#a07040",
+          }}
+        />
+        <span
+          style={{
+            fontFamily: "Georgia, serif",
+            fontSize: "28px",
+            color: "#d4b896",
+            letterSpacing: "4px",
+            textTransform: "uppercase",
+          }}
+        >
+          Twelve Rivers Realty
+        </span>
         <span
           style={{
             fontFamily: "Georgia, serif",
             fontSize: "22px",
-            color: "#d4b896",
-            letterSpacing: "3px",
-            textTransform: "uppercase",
+            color: "#8a7a6a",
+            letterSpacing: "2px",
           }}
         >
-          Twelve Rivers Realty · Paul Smith · 512.228.8074
+          Paul Smith · 512.228.8074
         </span>
       </AbsoluteFill>
 
-      {/* Text slides */}
-      {slides.map((text, i) => (
-        <Sequence
-          key={i}
-          from={i * slideDuration}
-          durationInFrames={slideDuration}
-        >
-          <TextSlide
-            text={text}
-            startFrame={i * slideDuration}
-            durationInFrames={slideDuration}
-          />
-        </Sequence>
-      ))}
+      {/* Background music */}
+      <Audio src="/music.mp3" volume={0.3} />
     </AbsoluteFill>
   );
 }
